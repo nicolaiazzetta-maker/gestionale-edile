@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Edile Pro - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { color: #2c3e50; margin-bottom: 30px; }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        #app { display: none; }
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .password-toggle {
+            position: relative;
+        }
+        .password-toggle button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box" id="loginBox">
+        <h1>🏗️ Gestionale Edile</h1>
+        <div id="errorMsg"></div>
+        
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" required autocomplete="username">
+            </div>
+            <div class="form-group password-toggle">
+                <label>Password</label>
+                <input type="password" id="password" required autocomplete="current-password">
+                <button type="button" onclick="togglePassword()">👁️</button>
+            </div>
+            <button type="submit">🔐 Accedi</button>
+        </form>
+
+        <div class="alert alert-info">
+            <strong>📝 Credenziali Iniziali:</strong><br>
+            Username: <code>admin</code><br>
+            Password: <code>edile2025</code><br><br>
+            <small>⚠️ Cambiare la password dopo il primo accesso!</small>
+        </div>
+    </div>
+
+    <div id="app"></div>
+
+    <script>
+        // Sistema di autenticazione con localStorage
+        function getUsers() {
+            const users = localStorage.getItem('gestionaleUsers');
+            if (!users) {
+                const defaultUsers = {
+                    'admin': { password: hashPassword('edile2025'), role: 'admin', createdAt: new Date().toISOString() }
+                };
+                localStorage.setItem('gestionaleUsers', JSON.stringify(defaultUsers));
+                return defaultUsers;
+            }
+            return JSON.parse(users);
+        }
+
+        function saveUsers(users) {
+            localStorage.setItem('gestionaleUsers', JSON.stringify(users));
+        }
+
+        function hashPassword(password) {
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString(36);
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+
+            const users = getUsers();
+            const user = users[username];
+
+            if (user && user.password === hashPassword(password)) {
+                sessionStorage.setItem('loggedIn', 'true');
+                sessionStorage.setItem('username', username);
+                sessionStorage.setItem('userRole', user.role);
+                showApp();
+            } else {
+                errorMsg.innerHTML = '<div class="alert alert-danger">❌ Credenziali non valide!</div>';
+                setTimeout(() => errorMsg.innerHTML = '', 3000);
+            }
+        }
+
+        function showApp() {
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            
+            const username = sessionStorage.getItem('username');
+            const userRole = sessionStorage.getItem('userRole');
+            
+            document.getElementById('app').innerHTML = `
+                <iframe src="gestionale-main.html" id="mainFrame"></iframe>
+            `;
+
+            setTimeout(() => {
+                const frame = document.getElementById('mainFrame');
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({
+                        type: 'LOGIN_DATA',
+                        username: username,
+                        role: userRole
+                    }, '*');
+                }
+            }, 1000);
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        window.onload = function() {
+            if (sessionStorage.getItem('loggedIn') === 'true') {
+                showApp();
+            }
+        };
+
+        // Listener per gestione utenti
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'GET_USERS') {
+                event.source.postMessage({
+                    type: 'USERS_DATA',
+                    users: getUsers()
+                }, '*');
+            } else if (event.data.type === 'ADD_USER') {
+                const users = getUsers();
+                users[event.data.username] = {
+                    password: hashPassword(event.data.password),
+                    role: event.data.role,
+                    createdAt: new Date().toISOString()
+                };
+                saveUsers(users);
+                event.source.postMessage({
+                    type: 'USER_ADDED',
+                    success: true
+                }, '*');
+            } else if (event.data.type === 'DELETE_USER') {
+                const users = getUsers();
+                if (event.data.username !== 'admin') {
+                    delete users[event.data.username];
+                    saveUsers(users);
+                    event.source.postMessage({
+                        type: 'USER_DELETED',
+                        success: true
+                    }, '*');
+                }
+            } else if (event.data.type === 'CHANGE_PASSWORD') {
+                const users = getUsers();
+                const currentUser = sessionStorage.getItem('username');
+                if (users[currentUser]) {
+                    if (users[currentUser].password === hashPassword(event.data.currentPassword)) {
+                        users[currentUser].password = hashPassword(event.data.newPassword);
+                        saveUsers(users);
+                        event.source.postMessage({
+                            type: 'PASSWORD_CHANGED',
+                            success: true
+                        }, '*');
+                    } else {
+                        event.source.postMessage({
+                            type: 'PASSWORD_CHANGED',
+                            success: false,
+                            error: 'Password attuale non corretta'
+                        }, '*');
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
